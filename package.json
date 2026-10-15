@@ -1,0 +1,38 @@
+{
+  "name": "pharos-arbitrage-scanner",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "pharos-arb": "scripts/cli.mjs"
+  },
+  "scripts": {
+    "scan": "node scripts/cli.mjs",
+    "skill": "node scripts/invoke-skill.mjs",
+    "test": "node --test",
+    "check": "node --test",
+    "build": "rollup --config rollup.config.mjs",
+    "dev": "wrangler dev",
+    "deploy": "npm run build && wrangler deploy dist/worker.js --no-bundle"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "viem": "2.55.2",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^29.0.3",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "rollup": "^4.64.7",
+    "wrangler": "4.45.4"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "allowScripts": {
+    "esbuild@0.25.4": true,
+    "sharp@0.33.5": true,
+    "workerd@1.20251011.0": true
+  }
+}

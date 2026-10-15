@@ -1,0 +1,46 @@
+{
+  "recordedAt": "2026-10-15T13:33:08.881Z",
+  "workerUrl": "https://pharos-arbitrage-scanner.shoupeorg.workers.dev",
+  "deploymentVersionAtCapture": "b8103bae-d29f-4cf4-ab02-84f6368d4bf1",
+  "transactionsBroadcast": 0,
+  "live": {
+    "scanId": "live-1792080533321-ae4e6571",
+    "mode": "LIVE QUOTES / SIMULATED EXECUTION",
+    "chainId": 1672,
+    "blockNumber": "20320202",
+    "decision": "SKIP",
+    "sourceA": "0x7F4A462FC320db1E26dd1366DcE9E276eE6c5930",
+    "sourceB": "0x8e3fDBEf5cD72D2dAE407dB1DC61bff44d1DBE9F",
+    "reason": "Fees, price impact, slippage allowance, and gas erase the gross spread."
+  },
+  "deterministicFixtures": [
+    {
+      "scanId": "simulation-1792080538334-5d63bc30",
+      "scenario": "profitable",
+      "decision": "PREPARE",
+      "netProfitUsdc": "218.709894",
+      "thresholdUsdc": "5",
+      "planId": "plan-simulation-1792080538334-5d63bc30",
+      "calldataBytes": 420,
+      "warning": "SIMULATED PRICES; unsigned fixture-derived plan; must not be broadcast"
+    },
+    {
+      "scanId": "simulation-1792080538617-ffa5ecbd",
+      "scenario": "costsErase",
+      "decision": "SKIP",
+      "netProfitUsdc": "-33.333305"
+    },
+    {
+      "scanId": "simulation-1792080538881-f6882634",
+      "scenario": "belowThreshold",
+      "decision": "SKIP",
+      "netProfitUsdc": "218.709894",
+      "thresholdUsdc": "300"
+    }
+  ],
+  "idempotencyCheck": {
+    "requestKeyReplayed": true,
+    "deduplicated": true,
+    "duplicatePlanCreated": false
+  }
+}

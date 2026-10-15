@@ -1,0 +1,11 @@
+node_modules/
+.npm-cache/
+.pydeps/
+dist/
+dist-upload/
+.wrangler/
+.dev.vars
+.env
+.env.*
+!.env.example
+*.log
