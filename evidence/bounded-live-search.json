@@ -1,0 +1,46 @@
+{
+  "label": "BOUNDED LIVE CROSS-PROTOCOL SEARCH",
+  "generatedAt": "2026-10-15T18:14:51.082Z",
+  "amounts": ["0.0001", "0.001", "0.01", "0.05"],
+  "sources": [
+    { "protocol": "DODO V2 PMM", "address": "0xac998dD78829aDe9f654e0BE7a4D7F60D8B37196" },
+    { "protocol": "FaroSwap V2", "address": "0x7F4A462FC320db1E26dd1366DcE9E276eE6c5930" }
+  ],
+  "gasPriceWei": "10000000000",
+  "gasPriceSource": "MCP get_gas_price observation",
+  "results": [
+    {
+      "scanId": "live-bounded-0p0001-1792087900721", "createdAt": "2026-10-15T18:11:40.721Z", "tradeAmount": "0.0001", "blockNumber": "20327534",
+      "routes": [
+        { "route": "dodo-v2-pmm → faroswap-v2-30bps", "afterFeeOutputRaw": "96", "netProfitRaw": "-4505" },
+        { "route": "faroswap-v2-30bps → dodo-v2-pmm", "afterFeeOutputRaw": "102", "netProfitRaw": "-4499" }
+      ],
+      "decision": "SKIP", "reason": "Fees, price impact, slippage allowance, and gas erase the gross spread."
+    },
+    {
+      "scanId": "live-bounded-0p001-1792087963988", "createdAt": "2026-10-15T18:12:43.988Z", "tradeAmount": "0.001", "blockNumber": "20327584",
+      "routes": [
+        { "route": "dodo-v2-pmm → faroswap-v2-30bps", "afterFeeOutputRaw": "959", "netProfitRaw": "-4546" },
+        { "route": "faroswap-v2-30bps → dodo-v2-pmm", "afterFeeOutputRaw": "1023", "netProfitRaw": "-4483" }
+      ],
+      "decision": "SKIP", "reason": "Fees, price impact, slippage allowance, and gas erase the gross spread."
+    },
+    {
+      "scanId": "live-bounded-0p01-1792088014909", "createdAt": "2026-10-15T18:13:34.909Z", "tradeAmount": "0.01", "blockNumber": "20327634",
+      "routes": [
+        { "route": "dodo-v2-pmm → faroswap-v2-30bps", "afterFeeOutputRaw": "9291", "netProfitRaw": "-5256" },
+        { "route": "faroswap-v2-30bps → dodo-v2-pmm", "afterFeeOutputRaw": "9893", "netProfitRaw": "-4657" }
+      ],
+      "decision": "SKIP", "reason": "Fees, price impact, slippage allowance, and gas erase the gross spread."
+    },
+    {
+      "scanId": "live-bounded-0p05-1792088041358", "createdAt": "2026-10-15T18:14:01.358Z", "tradeAmount": "0.05", "blockNumber": "20327644",
+      "routes": [
+        { "route": "dodo-v2-pmm → faroswap-v2-30bps", "afterFeeOutputRaw": "40759", "netProfitRaw": "-13945" },
+        { "route": "faroswap-v2-30bps → dodo-v2-pmm", "afterFeeOutputRaw": "43215", "netProfitRaw": "-11502" }
+      ],
+      "decision": "SKIP", "reason": "Fees, price impact, slippage allowance, and gas erase the gross spread."
+    }
+  ],
+  "note": "Each size was a genuine MCP-only read at its recorded block. No live profitability is claimed. No transaction was signed or broadcast."
+}

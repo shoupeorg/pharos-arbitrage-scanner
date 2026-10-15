@@ -1,6 +1,6 @@
 {
   "name": "pharos-arbitrage-scanner",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "bin": {
@@ -8,6 +8,7 @@
   },
   "scripts": {
     "scan": "node scripts/cli.mjs",
+    "scan:bounded": "node scripts/bounded-live-search.mjs",
     "skill": "node scripts/invoke-skill.mjs",
     "test": "node --test",
     "check": "node --test",

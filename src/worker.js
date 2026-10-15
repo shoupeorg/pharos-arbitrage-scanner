@@ -22,7 +22,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
-      if (url.pathname === "/api/config" && request.method === "GET") return json({ network: NETWORK, chainId: CHAIN_ID, mcpEndpoint: MCP_URL, explorer: EXPLORER, pair: `${BASE.symbol}/${QUOTE.symbol}`, base: BASE, quote: QUOTE, factory: FACTORY, router: ROUTER, liveSources: LIVE_SOURCES, defaultConfig: DEFAULT_CONFIG, sourceMode: "LIVE QUOTES / SIMULATED EXECUTION", officialSources: OFFICIAL_SOURCES });
+      if (url.pathname === "/api/config" && request.method === "GET") return json({ network: NETWORK, chainId: CHAIN_ID, mcpEndpoint: MCP_URL, explorer: EXPLORER, pair: `${BASE.symbol}/${QUOTE.symbol}`, base: BASE, quote: QUOTE, factory: FACTORY, router: ROUTER, liveSources: LIVE_SOURCES, defaultConfig: DEFAULT_CONFIG, sourceMode: "LIVE CROSS-PROTOCOL QUOTES / SIMULATED EXECUTION", protocolIndependence: "DODO V2 PMM + FaroSwap V2", officialSources: OFFICIAL_SOURCES });
       if (url.pathname === "/api/scans" && request.method === "POST") return await createScan(request, env);
       if (url.pathname === "/api/scans" && request.method === "GET") return json({ scans: await new D1ScanStore(env.DB).list(Math.min(Number(url.searchParams.get("limit") || 30), 100)) });
       const detail = url.pathname.match(/^\/api\/scans\/([a-zA-Z0-9-]+)$/);

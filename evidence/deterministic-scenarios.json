@@ -1,0 +1,38 @@
+{
+  "generatedAt": "2026-10-15T18:16:00.000Z",
+  "label": "DETERMINISTIC LOCAL-MODEL EVIDENCE — NOT LIVE PRICES",
+  "scenarios": [
+    {
+      "scanId": "simulation-profitable-cross-protocol-evidence",
+      "decision": "PREPARE",
+      "reason": "Conservative net profit strictly exceeds the configured threshold.",
+      "bestRoute": "fixture-pool-a → fixture-pool-b",
+      "netProfitRaw": "218709894",
+      "netProfitUSDC": "218.709894",
+      "plan": {
+        "id": "plan-simulation-profitable-cross-protocol-evidence",
+        "atomic": false,
+        "transactions": [
+          { "adapter": "DODO-shaped", "destination": "0x6F1142F4BF632E4877497c05818492824F540Ad5", "functionName": "dodoSwapV2TokenToToken" },
+          { "adapter": "FaroSwap-shaped", "destination": "0xd285E37678F07631f33EB99927EB3fF0591a12d7", "functionName": "swapExactTokensForTokens" }
+        ],
+        "modelExecution": { "independentInstances": ["fixture-pool-a", "fixture-pool-b"], "inputRaw": "1000000000", "intermediateRaw": "9871580343970612988", "outputRaw": "1221764606", "matchesScannerAfterFeeOutput": true }
+      }
+    },
+    {
+      "scanId": "simulation-costsErase-cross-protocol-evidence",
+      "decision": "SKIP",
+      "reason": "Fees, price impact, slippage allowance, and gas erase the gross spread.",
+      "bestNetProfitRaw": "-33333305",
+      "plan": null
+    },
+    {
+      "scanId": "simulation-belowThreshold-cross-protocol-evidence",
+      "decision": "SKIP",
+      "reason": "Net profit does not strictly exceed the configured threshold.",
+      "positiveNetProfitRaw": "218709894",
+      "thresholdRaw": "300000000",
+      "plan": null
+    }
+  ]
+}

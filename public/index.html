@@ -17,16 +17,16 @@
     <div class="titlebar"><span><b class="app-icon">⇄</b> ARBITRAGE_SCANNER.EXE</span><span class="window-chrome"><i>_</i><i>□</i><i>×</i></span></div>
     <div class="menubar"><span>TWO-SOURCE SCAN</span><span>OFFICIAL CHAIN MCP</span><span class="menu-right">READ ONLY / SIMULATED EXECUTION</span></div>
     <div class="window-body">
-      <section class="intro"><p class="kicker">PHAROS AGENT ARENA / EXECUTABLE-SIZE QUOTES</p><h1>COMPARE → COST → DECIDE<span class="cursor">_</span></h1><p>Compare two independently addressed FaroSwap pools at one pinned block. PREPARE creates only a persistent simulated plan; this application cannot sign or broadcast transactions.</p></section>
-      <div class="notice"><b>⚠ NO EXECUTION</b><span>Live mode reads genuine WPROS/USDC reserves through MCP. Deterministic presets are visibly separate test fixtures.</span></div>
+      <section class="intro"><p class="kicker">PHAROS AGENT ARENA / CROSS-PROTOCOL EXECUTABLE QUOTES</p><h1>COMPARE → COST → DECIDE<span class="cursor">_</span></h1><p>Compare DODO V2 PMM and FaroSwap V2 for WPROS/USDC at one pinned block. PREPARE creates only a persistent unsigned plan; this application cannot sign or broadcast transactions.</p></section>
+      <div class="notice"><b>⚠ NON-ATOMIC / NO EXECUTION</b><span>Live reads use official Chain MCP. A prepared route has two venue-specific transactions and leg-two risk. Deterministic presets are visibly separate local-model fixtures.</span></div>
       <fieldset class="control-panel"><legend>01 · SCAN CONFIGURATION</legend>
         <div class="form-grid">
-          <label>MODE<select id="mode"><option value="live">LIVE QUOTES / SIMULATED EXECUTION</option><option value="simulation">SIMULATED PRICES / SIMULATED EXECUTION</option></select></label>
+          <label>MODE<select id="mode"><option value="live">LIVE CROSS-PROTOCOL / SIMULATED EXECUTION</option><option value="simulation">SIMULATED PRICES / SIMULATED EXECUTION</option></select></label>
           <label>TRADE AMOUNT (USDC)<input id="tradeAmount" value="0.0001" inputmode="decimal"></label>
           <label>MIN NET PROFIT (USDC)<input id="minimumProfit" value="0.00001" inputmode="decimal"></label>
           <label>SLIPPAGE ALLOWANCE (BPS)<input id="slippageBps" value="50" inputmode="numeric"></label>
-          <label>GAS UNITS · INCLUDES APPROVAL<input id="gasUnits" value="300000" inputmode="numeric"></label>
-          <label>GAS PRICE (GWEI)<input id="gasPriceGwei" value="10" inputmode="decimal"></label>
+          <label>COMBINED GAS UNITS · ESTIMATE<input id="gasUnits" value="600000" inputmode="numeric"></label>
+          <label>GAS PRICE (OBSERVED OR GWEI OVERRIDE)<input id="gasPriceGwei" value="observed"></label>
           <label>ASSUMED PROS PRICE (USDC)<input id="nativePriceQuote" value="0.75" inputmode="decimal"></label>
           <label>PLAN TTL (SECONDS)<input id="quoteTtlSeconds" value="60" inputmode="numeric"></label>
           <label>UNSIGNED PLAN RECIPIENT<input id="recipient" value="0xf2039216c4320CFFC5FB1B704642f9a706b95eE2" spellcheck="false"></label>

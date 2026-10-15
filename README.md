@@ -1,27 +1,23 @@
 # Pharos Arbitrage Scanner
 
-A read-only Pharos Agent Arena submission that compares two real FaroSwap WPROS/USDC pools in one scan, models a complete quote → base → quote cycle, and records either `SKIP` or a review-only `SIMULATED EXECUTION PLAN`. It never signs or broadcasts a transaction.
+A read-only Pharos Agent Arena submission that compares executable WPROS/USDC quotes from two different protocols—DODO V2 PMM and FaroSwap V2—through the official Pharos Chain MCP. It evaluates both route directions, persists every scan, and returns either an honest `SKIP` or a review-only unsigned `PREPARE` plan. It cannot sign or broadcast transactions.
 
-## Live demo
-
-<https://pharos-arbitrage-scanner.shoupeorg.workers.dev/>
+Live demo: <https://pharos-arbitrage-scanner.shoupeorg.workers.dev/>
 
 ## Install and run
 
-Requires Node.js 20 or newer.
+Node.js 20 or newer is required.
 
 ```bash
 npm install
 npm run scan -- --mode=live
+npm run scan -- --mode=live --trade=0.001 --threshold=0.00001 --slippage=50 --gas-units=600000 --native-price=0.75
+npm run scan:bounded
 ```
 
-Example policy overrides use decimal strings:
+Live mode uses the MCP `get_gas_price` observation by default. A numeric `--gas-gwei=3` is an explicit override and is labeled as such in the result.
 
-```bash
-npm run scan -- --mode=live --trade=0.0001 --threshold=0.00001 --slippage=50 --gas-units=300000 --gas-gwei=10 --native-price=0.75 --recipient=0xf2039216c4320CFFC5FB1B704642f9a706b95eE2
-```
-
-Deterministic demonstrations:
+Deterministic demonstrations are deliberately separate from live evidence:
 
 ```bash
 npm run scan -- --mode=simulation --preset=profitable
@@ -29,49 +25,51 @@ npm run scan -- --mode=simulation --preset=costsErase
 npm run scan -- --mode=simulation --preset=belowThreshold
 ```
 
-Add `--json` for the complete machine-readable trace.
+Add `--json` for the complete trace. The CLI, Skill helper, and Worker API all call the same `src/scanner.js` engine.
 
 ## Reusable Skill
 
-The installable Skill is [SKILL.md](./SKILL.md). Install or copy this repository into a Codex Skill directory, then invoke it by asking Codex to use `pharos-arbitrage-scanner`, or run its helper directly:
+The installable root Skill is [SKILL.md](./SKILL.md). Copy or clone the repository into a Codex Skill directory, install dependencies, and ask Codex to use `pharos-arbitrage-scanner`, or invoke the helper directly:
 
 ```bash
 npm run skill -- --mode=live
 ```
 
-The helper and web API both call `src/scanner.js`; neither has a separate decision implementation.
+The Skill instructs the agent to retain the live/fixture distinction, report both route directions and all modeled costs, and never add a direct-RPC or transaction-broadcast path.
 
-## Verified live sources
+## Verified real sources
 
-All blockchain reads use the official Pharos Chain MCP over Streamable HTTP:
+All blockchain reads use Streamable HTTP at `https://mcp.pharos.xyz/mcp`. The server implementation is the official [Pharos MCP repository](https://github.com/PharosNetwork/pharos-mcp). Network checks require Pharos Pacific Mainnet chain ID `1672`.
 
-- Endpoint: `https://mcp.pharos.xyz/mcp`
-- Network: Pharos Pacific Mainnet, chain ID `1672`
-- MCP implementation: <https://github.com/PharosNetwork/pharos-mcp>
-- FaroSwap interface: <https://github.com/faroswap/interface>
-- FaroSwap contracts: <https://github.com/faroswap/contracts>
-- Live project: <https://faroswap.xyz/>
+| Field | DODO source | FaroSwap source |
+| --- | --- | --- |
+| Protocol | DODO V2 PMM (DVM) | FaroSwap V2 constant product |
+| Pool | `0xac998dD78829aDe9f654e0BE7a4D7F60D8B37196` | `0x7F4A462FC320db1E26dd1366DcE9E276eE6c5930` |
+| Factory | `0xB9319bCEe26F1A6AC7207A738B021cdEC771b30E` | `0x18Fab7d7027E9FB33Fa90ca607439449209F7B09` |
+| Quote method | `querySellQuote` / `querySellBase` | fee-aware constant-product formula over `getReserves` |
+| Fee model | pool LP fee plus trader-specific maintainer fee, both read at the pinned block | fixed `feeRate()`, verified as 30 bps |
+| Execution destination | DODO Proxy02 `0x6F1142F4BF632E4877497c05818492824F540Ad5` | Router02 `0xd285E37678F07631f33EB99927EB3fF0591a12d7` |
+| Approval spender | DODOApprove `0xBF105f4ffBD3825f5433d074008B9A76237d849c` | Router02 |
 
-The scanner verifies bytecode, router → factory linkage, pool factory membership, token order, decimals, pool fees, and reserves at one explicit block before using a quote:
+Tokens are WPROS `0x52C48d4213107b20bC583832b0d951FB9CA8F0B0` (18 decimals) and USDC `0xC879C018dB60520F4355C26eD1a6D572cdAC1815` (6 decimals). Both sources use WPROS as base and USDC as quote.
 
-| Item | Address / value |
-| --- | --- |
-| FaroSwap V2 factory | `0x18Fab7d7027E9FB33Fa90ca607439449209F7B09` |
-| FaroSwap Router02 | `0xd285E37678F07631f33EB99927EB3fF0591a12d7` |
-| Base | WPROS, `0x52C48d4213107b20bC583832b0d951FB9CA8F0B0`, 18 decimals |
-| Quote | USDC, `0xC879C018dB60520F4355C26eD1a6D572cdAC1815`, 6 decimals |
-| Source A | `0x7F4A462FC320db1E26dd1366DcE9E276eE6c5930`, 30 bps |
-| Source B | `0x8e3fDBEf5cD72D2dAE407dB1DC61bff44d1DBE9F`, 1 bp |
+Deployment provenance comes from the live [FaroSwap application](https://faroswap.xyz/) and its chain-1672 production configuration, the official [FaroSwap interface](https://github.com/faroswap/interface) and [contracts](https://github.com/faroswap/contracts), and the official [DODO V2 contracts](https://github.com/DODOEX/contractV2). The exact verification snapshot and the stronger operator-independence caveat are documented in [evidence/protocol-verification.md](./evidence/protocol-verification.md).
 
-The Router02 address is present in the current official `faroswap.xyz` production bundle. The verified FaroSwap contract source defines `swapExactTokensForTokens(amountIn, amountOutMin, path, fees, to, deadline)`, which supports the atomic three-token/two-fee-tier cycle used by the unsigned plan.
+Before using a quote, one pinned block is selected and the scanner verifies:
 
-These are two independently addressable pools with different fee tiers returned by the verified factory for the same ordered asset pair. They are both FaroSwap pools, not two independent DEX protocols. Source B has very low liquidity; the executable-size calculation therefore differs materially from its spot price. This limitation is deliberately visible rather than hidden behind fabricated quotes.
+- chain ID, token bytecode/metadata/decimals, and nonzero liquidity;
+- bytecode for both factories, pools, execution contracts, and approval contracts;
+- DODO pool membership via `DVMFactory.getDODOPoolBidirection`, pool token order, reserves, mid price, and user fee rates;
+- FaroSwap router → factory linkage, factory pool lookup, pool token order, reserves, and fee;
+- DODO executable outputs for the precise route inputs using pinned `querySellQuote` and `querySellBase` calls.
 
-The live reader lists and validates these required MCP tools: `get_chain_info`, `get_block`, `get_code`, `get_gas_price`, and `eth_call`. Contract calls are batched through Multicall3 but still executed by MCP `eth_call`. There is no JSON-RPC fallback.
+The required MCP tools are `get_chain_info`, `get_block`, `get_code`, `get_gas_price`, and `eth_call`. There is no direct JSON-RPC fallback.
 
-## Economic model
+## Economics and decision rule
 
-For each pool, constant-product executable output is calculated with integers:
+Both directions are evaluated: DODO → FaroSwap and FaroSwap → DODO. All token arithmetic is `BigInt`; decimal strings are parsed exactly, outputs round down, and costs round up.
+
+For FaroSwap, executable output is:
 
 ```text
 effectiveInput = amountIn × (10,000 − feeBps)
@@ -79,122 +77,88 @@ amountOut = floor(effectiveInput × reserveOut
                   / (reserveIn × 10,000 + effectiveInput))
 ```
 
-For each A→B and B→A cycle the scanner computes, in order:
+For DODO, the scanner uses the pool's executable `querySellQuote`/`querySellBase` result. It reads `getMidPrice` and `getUserFeeRate`, reconstructs the pre-fee PMM output, and records the maintainer fee returned by the quote. This permits one consistent quote-denominated breakdown:
 
-1. Ideal no-fee/no-price-impact output from reserve ratios.
-2. No-fee constant-product output; the difference from (1) is price-impact cost.
-3. Fee-inclusive constant-product output; the difference from (2) is fee cost. Fees are not subtracted again.
-4. A configurable slippage safety allowance, rounded up, subtracted from output.
-5. `gasUnits × gasPriceWei`, converted to USDC with the configured PROS/USDC assumption and rounded up.
-6. `netProfit = conservativeOutput − input − gasCostQuote`.
+1. `idealNoFeeNoImpactOutput` from the two spot/mid prices;
+2. `noFeePriceImpactOutput` from fee-free venue models;
+3. `priceImpactCost = max(ideal − noFee, 0)`;
+4. `feeCost = max(noFee − executableAfterFees, 0)`—fees are not subtracted again;
+5. one final-output slippage allowance;
+6. `gasUnits × gasPriceWei`, converted to USDC using the visible configured PROS/USDC assumption;
+7. `netProfit = afterFees − slippageAllowance − input − gasCostQuote`.
 
-`PREPARE` is allowed only when `netProfit > minimumProfit` (strict inequality), both sources validate, the selected fee tiers resolve to the two verified pools, and the quote is unexpired. A profitable live observation is fetched again at a new pinned block immediately before a plan is created.
+The default gas price is the live MCP observation. `get_gas_price` is unpinned and recorded separately; every contract read and quote is pinned. Combined gas units and the native-token/USDC conversion remain explicit estimates, not a gas simulation or oracle.
 
-The plan contains an ABI-valid **unsigned** Router02 transaction object:
+`PREPARE` requires valid fresh sources and `netProfit > minimumProfit` (strict inequality). A profitable live observation is fully re-read at a new pinned block before plan creation. Plans have a short TTL and are marked expired when read after it.
 
-- destination `0xd285E37678F07631f33EB99927EB3fF0591a12d7`;
-- chain ID `1672`, zero native value, and complete calldata;
-- atomic path `USDC → WPROS → USDC` with the selected `[buyFee, sellFee]` tiers;
-- input, final `amountOutMin`, configurable recipient, deadline/expiry, and both source pool addresses;
-- an intermediate minimum shown as a review constraint. Router02 enforces the final cycle minimum atomically, not that intermediate review constraint separately;
-- approval prerequisite for USDC and its inclusion in the configured aggregate gas-unit budget.
+## Unsigned plan and atomicity
 
-A fixture `PREPARE` plan uses deterministic reserves rather than live liquidity. Its calldata is ABI-valid and maps the 30-bps/1-bp tiers to the verified contracts, but its fixture-derived minimum is **not a current executable quote and must not be broadcast**. No private key, signing, or send endpoint exists.
+A plan is venue-correct rather than reusing one router for both protocols. It contains:
 
-Gas price and native-token price are configurable model inputs. The actual current `get_gas_price` observation is recorded separately; `get_gas_price` itself is the only unpinned observation. `approvalIncluded: true` documents that the configured aggregate gas budget is intended to include approval when needed.
+- chain ID, deadline/expiry, required sender, input and minimum outputs;
+- one DODO `dodoSwapV2TokenToToken` transaction with DODO pool direction and DODOApprove prerequisite;
+- one FaroSwap `swapExactTokensForTokens` transaction with the correct path, fee, recipient, and Router02 approval;
+- full destinations, zero values, calldata, decoded arguments, and allowance prerequisites.
 
-All token arithmetic uses `BigInt` after strict decimal-string parsing. Outputs round down; costs round up. JavaScript floating point is not used for token values.
+The plan is **non-atomic**. Leg one can settle while leg two fails or becomes unprofitable. The output therefore requires a new read and leg-two rebuild from the actual leg-one output before signing. No executor contract is deployed. This app does not sign, send, or simulate a public-chain transaction.
+
+The profitable deterministic fixture executes the same constant-product policy against two independent in-memory AMM states and records both state transitions. Its venue-shaped calldata is structurally reviewable, but its minimums come from fixture prices and **must not be broadcast**.
 
 ## Persistence and API
 
-Cloudflare D1 stores every accepted live or simulation scan, including source failures. A unique request key makes retries idempotent, `scan_id` is unique, and the schema permits at most one plan per scan. Expired plans are marked `expired` when read.
+Cloudflare D1 stores every accepted live or simulation scan, including source errors. A request key makes retries idempotent, and the schema permits at most one plan per scan.
 
-- `GET /api/config` — verified configuration and official source links
+- `GET /api/config` — verified configuration and official sources
 - `POST /api/scans` — run and persist a scan
 - `GET /api/scans` — persistent history
 - `GET /api/scans/:id` — full trace
 
-## Recorded application output
+Historical same-FaroSwap records from the previous version remain in D1 and keep their original mode labels. New records are labeled `LIVE CROSS-PROTOCOL QUOTES / SIMULATED EXECUTION`.
 
-These outputs were generated by the actual shared scanner on 2026-10-15. Fixture results are intentionally labeled simulation; they are not market claims. The compact capture manifest is in [`evidence/recorded-scans.json`](./evidence/recorded-scans.json).
+## Recorded evidence
 
-Deployed D1 evidence:
+The bounded live search on 2026-10-15 tested `0.0001`, `0.001`, `0.01`, and `0.05` USDC at blocks `20327534`, `20327584`, `20327634`, and `20327644`. Every scan used DODO and FaroSwap, observed gas price `10 gwei`, and correctly returned `SKIP`; no live profitability is claimed. See [evidence/bounded-live-search.json](./evidence/bounded-live-search.json).
 
-- [real two-source live scan — SKIP](https://pharos-arbitrage-scanner.shoupeorg.workers.dev/api/scans/live-1792080533321-ae4e6571)
-- [deterministic profitable fixture — PREPARE](https://pharos-arbitrage-scanner.shoupeorg.workers.dev/api/scans/simulation-1792080538334-5d63bc30)
-- [deterministic costs-erase-spread fixture — SKIP](https://pharos-arbitrage-scanner.shoupeorg.workers.dev/api/scans/simulation-1792080538617-ffa5ecbd)
-- [deterministic positive-net-below-threshold fixture — SKIP](https://pharos-arbitrage-scanner.shoupeorg.workers.dev/api/scans/simulation-1792080538881-f6882634)
-
-### Real mainnet scan — SKIP
+Example actual live output:
 
 ```text
-LIVE QUOTES / SIMULATED EXECUTION
-SCAN live-1792079914011-270812e8
-BLOCK 20319675 · CHAIN 1672 · WPROS/USDC
-SOURCE A reserves 470812474748355115 / 282198 · fee 30 bps
-SOURCE B reserves 1577018305457365 / 1611 · fee 1 bp
-A → B: gross spot spread 70.4326%; after fees 0.000153 USDC;
-       price impact 0.000016, fees 0.000001, slippage 0.000001,
-       gas 0.00225, conservative output 0.000152,
-       net -0.002198 USDC
+LIVE CROSS-PROTOCOL QUOTES / SIMULATED EXECUTION
+BLOCK 20327364 · CHAIN 1672 · WPROS/USDC
+DODO V2 PMM pool 0xac998d...7196 · spot 0.618849 USDC/WPROS
+FaroSwap V2 pool 0x7F4A46...5930 · spot 0.599385 USDC/WPROS
+FaroSwap → DODO · after fees 0.000102 USDC
+slippage 0.000001 · observed-gas cost 0.0045 USDC
+net -0.004499 USDC
 DECISION SKIP — Fees, price impact, slippage allowance, and gas erase the gross spread.
 ```
 
-### Deterministic profitable fixture — PREPARE
+Deterministic evidence is in [evidence/deterministic-scenarios.json](./evidence/deterministic-scenarios.json):
 
-```text
-SIMULATED PRICES / SIMULATED EXECUTION
-SCAN (local recorded fixture; deployed ID listed after verification)
-fixture-pool-a → fixture-pool-b
-conservative output 1218.710194 USDC
-net 218.709894 USDC · threshold 5 USDC
-DECISION PREPARE
-PLAN SIMULATED EXECUTION PLAN · UNSIGNED TRANSACTION
-DESTINATION 0xd285E37678F07631f33EB99927EB3fF0591a12d7 · CHAIN 1672
-PATH USDC → WPROS → USDC · FEES 30 bps → 1 bp · complete calldata recorded
-```
+- profitable fixture: `PREPARE`, net `218.709894` USDC, two venue-specific unsigned transactions, and matching local AMM state execution;
+- costs erase spread: `SKIP`, net `-33.333305` USDC;
+- positive net below threshold: `SKIP`, net `218.709894` USDC against a `300` USDC threshold.
 
-### Deterministic positive spread erased by costs — SKIP
+Legacy deployed evidence remains accessible and is explicitly same-protocol:
 
-```text
-SCAN (local recorded fixture; deployed ID listed after verification)
-best conservative output 996.666695 USDC
-gas model 30 USDC · net -33.333305 USDC
-DECISION SKIP — Fees, price impact, slippage allowance, and gas erase the gross spread.
-```
-
-### Deterministic positive net below threshold — SKIP
-
-```text
-SCAN (local recorded fixture; deployed ID listed after verification)
-best conservative output 1218.710194 USDC
-net 218.709894 USDC · threshold 300 USDC
-DECISION SKIP — Net profit does not strictly exceed the configured threshold.
-```
+- [legacy live same-FaroSwap scan](https://pharos-arbitrage-scanner.shoupeorg.workers.dev/api/scans/live-1792080533321-ae4e6571)
+- [legacy profitable fixture](https://pharos-arbitrage-scanner.shoupeorg.workers.dev/api/scans/simulation-1792080538334-5d63bc30)
 
 ## Test and deploy
 
 ```bash
-npm run check
+npm test
 npm run build
 npm run deploy
 ```
 
-Tests cover profitable preparation/idempotency, costs erasing a spread, strict threshold equality, both route directions, decimal precision and conservative rounding, separated fee/impact attribution, invalid/stale/missing sources, persistence of source-error records, shared CLI/web calculation, and live quote revalidation.
+Tests cover strict threshold behavior, both directions, exact decimal arithmetic, separated impact/fee costs, failure persistence, D1-style idempotency, live revalidation, observed-gas default versus explicit override, venue-specific calldata, non-atomic risk disclosure, and deterministic two-instance state transitions.
 
 ## Limitations
 
-- Both real sources are distinct fee-tier pools in the same FaroSwap protocol. This proves independent contracts and quote states, not cross-protocol venue diversity.
-- Source B is currently thin. A large input may produce extreme impact or insufficiently useful output; the scanner does not manufacture a profitable opportunity.
-- The native PROS/USDC conversion and aggregate gas units are explicit user assumptions, not an oracle feed or an on-chain gas estimate for a prepared transaction.
-- A reserve timestamp is the last pool update, not the freshness of the pinned chain read. Quote expiry is measured from scan creation; a plan is revalidated before creation and then has a short TTL.
-- Simulated plans are informational only. There is an unsigned ABI encoder, but no signer, private key, wallet connection, or execution endpoint.
-
-## Short submission video
-
-1. Open the deployed app and show the `LIVE QUOTES / SIMULATED EXECUTION` badge, MCP endpoint, chain ID, both pool addresses, fees, and configuration.
-2. Click `RUN SCAN`; show the pinned block, both source cards, both route evaluations, separate fee/impact/slippage/gas lines, and the honest live `SKIP` reason.
-3. Click `FIXTURE: PREPARE`, then `RUN SCAN →`; show the `SIMULATED PRICES / SIMULATED EXECUTION` badge and the structured `SIMULATED EXECUTION PLAN · UNSIGNED TRANSACTION`, including destination, calldata, chain ID and expiry.
-4. Run `FIXTURE: COST SKIP` and `FIXTURE: THRESHOLD SKIP`; show their distinct reasons.
-5. Refresh the page, open each recorded scan from `PERSISTENT SCAN HISTORY`, and show that the records survive refresh.
-6. In the repository, open root `SKILL.md`, `src/pharos-mcp.js`, `src/math.js`, and the passing test output. Emphasize that no trade was signed or broadcast.
+- The sources are protocol-distinct (DODO PMM versus FaroSwap V2), but both integrations are exposed by FaroSwap's production configuration; this is not a claim of independent operators or frontends.
+- Liquidity is thin. The bounded real scans were all `SKIP`; the app never fabricates a live opportunity.
+- DODO user fees can depend on the configured recipient/sender. Changing it changes the pinned quote.
+- Gas units and PROS/USDC conversion are visible estimates. Only gas price is observed from MCP by default.
+- The prepared route is two transactions and non-atomic. It is review evidence, not a safe execution service.
+- Deterministic fixtures are local models, not live data, a fork, or public-chain execution.
+- No signer, private key, wallet connection, contract deployment, approval, trade, or PHRS expenditure exists in this project.

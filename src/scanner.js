@@ -2,13 +2,14 @@ import { DEFAULT_CONFIG, NETWORK, CHAIN_ID, MCP_URL, BASE, QUOTE, OFFICIAL_SOURC
 import { normalizeConfig, evaluateScan, parseDecimal, parseInteger } from "./math.js";
 import { FIXTURES } from "./fixtures.js";
 import { readLiveSources } from "./pharos-mcp.js";
+import { simulateConstantProductPlan } from "./simulation.js";
 
 const hydrateSources = (sources) => sources.map((source) => ({ ...source, reserveBaseRaw: BigInt(source.reserveBaseRaw), reserveQuoteRaw: BigInt(source.reserveQuoteRaw) }));
 export const newScanId = (mode = "scan") => `${mode}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
 function liveProvenance(live, extra = {}) {
   return {
-    mode: "LIVE QUOTES / SIMULATED EXECUTION",
+    mode: "LIVE CROSS-PROTOCOL QUOTES / SIMULATED EXECUTION",
     network: NETWORK,
     chainId: CHAIN_ID,
     blockNumber: live.blockNumber,
@@ -17,10 +18,10 @@ function liveProvenance(live, extra = {}) {
     mcpTools: live.tools,
     tokenPair: `${BASE.symbol}/${QUOTE.symbol}`,
     tokens: live.tokens,
-    router: live.router,
+    venues: live.venues,
     bytecode: live.bytecode,
     gasObservation: live.gas,
-    gasModel: "The economic model uses the user-configured gas price; the current MCP observation is retained separately for review.",
+    gasModel: "Default: the economic model uses the current MCP get_gas_price observation. A user-entered numeric gwei value is an explicit, visible override.",
     unpinnedObservations: live.unpinnedObservations,
     sourceUrls: OFFICIAL_SOURCES,
     ...extra,
@@ -30,30 +31,42 @@ function liveProvenance(live, extra = {}) {
 export async function runScan({ mode = "live", preset, config = {}, scanId = newScanId(mode), now = new Date(), liveReader = readLiveSources } = {}) {
   if (!/^[a-z0-9][a-z0-9-]{7,100}$/i.test(scanId)) throw new Error("Invalid scan ID");
   if (mode === "live") {
-    const normalized = normalizeConfig({ ...DEFAULT_CONFIG, ...config });
+    const merged = { ...DEFAULT_CONFIG, ...config };
+    const tradeAmountRaw = parseDecimal(merged.tradeAmount, QUOTE.decimals, "Trade amount", { positive: true });
     try {
-      const live = await liveReader();
-      const initial = evaluateScan({ scanId, now, config: normalized, sources: hydrateSources(live.sources), provenance: liveProvenance(live, { quoteStage: "initial" }) });
+      const live = await liveReader({ tradeAmountRaw, trader: merged.recipient || DEFAULT_CONFIG.recipient });
+      const observedGasPriceWei = BigInt(live.gas.gasPriceWei);
+      const normalized = normalizeConfig(merged, QUOTE.decimals, { observedGasPriceWei });
+      const initial = evaluateScan({ scanId, now, config: normalized, sources: hydrateSources(live.sources), routeObservations: live.routeObservations, provenance: liveProvenance(live, { quoteStage: "initial", protocolIndependence: "VERIFIED: DODO V2 PMM and FaroSwap V2" }) });
       if (initial.decision !== "PREPARE") return initial;
 
       // A plan is never created from the first profitable observation. Refresh both
       // sources and rebuild the economics from one new pinned block immediately
       // before returning a reviewable plan.
-      const refreshed = await liveReader();
+      const refreshed = await liveReader({ tradeAmountRaw, trader: merged.recipient || DEFAULT_CONFIG.recipient });
+      const refreshedConfig = normalizeConfig(merged, QUOTE.decimals, { observedGasPriceWei: BigInt(refreshed.gas.gasPriceWei) });
       return evaluateScan({
         scanId,
         now,
-        config: normalized,
+        config: refreshedConfig,
         sources: hydrateSources(refreshed.sources),
+        routeObservations: refreshed.routeObservations,
         provenance: liveProvenance(refreshed, {
           quoteStage: "revalidated-before-plan",
           initialBlockNumber: live.blockNumber,
           revalidated: true,
+          protocolIndependence: "VERIFIED: DODO V2 PMM and FaroSwap V2",
         }),
       });
     } catch (error) {
-      const invalid = [0, 1].map((index) => ({ id: `live-source-${index + 1}`, label: `Live source ${index + 1}`, valid: false, error: error.message }));
-      return evaluateScan({ scanId, now, config: normalized, sources: invalid, provenance: { mode: "LIVE QUOTES / SIMULATED EXECUTION", network: NETWORK, chainId: CHAIN_ID, mcpEndpoint: MCP_URL, error: error.message, sourceUrls: OFFICIAL_SOURCES } });
+      const invalid = [
+        { id: "dodo-v2-pmm", label: "DODO V2 PMM", protocol: "DODO V2 PMM" },
+        { id: "faroswap-v2-30bps", label: "FaroSwap V2", protocol: "FaroSwap V2" },
+      ].map((source) => ({ ...source, valid: false, error: error.message }));
+      const errorConfig = normalizeConfig({ ...merged, gasPriceGwei: merged.gasPriceGwei === "observed" ? "1" : merged.gasPriceGwei });
+      errorConfig.gasPriceWei = 0n;
+      errorConfig.gasPriceSource = "UNAVAILABLE — source read failed; economics were not evaluated";
+      return evaluateScan({ scanId, now, config: errorConfig, sources: invalid, provenance: { mode: "LIVE CROSS-PROTOCOL QUOTES / SIMULATED EXECUTION", network: NETWORK, chainId: CHAIN_ID, mcpEndpoint: MCP_URL, error: error.message, sourceUrls: OFFICIAL_SOURCES } });
     }
   }
   if (mode !== "simulation") throw new Error("Mode must be live or simulation");
@@ -75,5 +88,7 @@ export async function runScan({ mode = "live", preset, config = {}, scanId = new
       if (custom.feeBps !== undefined) sources[index].feeBps = Number(parseInteger(custom.feeBps, `${key} fee`, 0, 9999));
     }
   }
-  return evaluateScan({ scanId, now, config: normalized, sources, provenance: { mode: "SIMULATED PRICES / SIMULATED EXECUTION", scenario: fixture.label, network: "DETERMINISTIC FIXTURE — NOT LIVE CHAIN DATA", chainId: null, snapshot: "shared in-memory constant-product reserves", assumptions: ["Both pool reserves", "pool fees", "gas price", "native-token price"] } });
+  const scan = evaluateScan({ scanId, now, config: normalized, sources, provenance: { mode: "SIMULATED PRICES / SIMULATED EXECUTION", scenario: fixture.label, network: "DETERMINISTIC FIXTURE — NOT LIVE CHAIN DATA", chainId: null, snapshot: "two independent in-memory constant-product AMM instances", assumptions: ["Both pool reserves", "pool fees", "gas price", "native-token price"], separation: "Fixtures test the shared policy/plan engine only and are never presented as live Pharos observations." } });
+  if (scan.plan) scan.plan.modelExecution = simulateConstantProductPlan(sources, scan);
+  return scan;
 }
